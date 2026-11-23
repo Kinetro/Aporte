@@ -25,6 +25,7 @@ public class Ventanilla {
     static int puerto;
 
     static final Object bloqueoReloj = new Object();
+    static final Object bloqueoLog = new Object();
     static long relojLamport = 0;
 
     static volatile boolean coordinadorDisponible = true;
@@ -224,12 +225,14 @@ public class Ventanilla {
                 : detalle.replace(';', ',').replace('\n', ' ').replace('\r', ' ');
         String linea = lamport + ";" + id + ";" + evento + ";" + limpio
                 + System.lineSeparator();
-        try {
-            Files.writeString(Path.of("logs", "v" + id + ".log"), linea,
-                    StandardCharsets.UTF_8,
-                    StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-        } catch (IOException e) {
-            System.err.println("Error de registro: " + e.getMessage());
+        synchronized (bloqueoLog) {
+            try {
+                Files.writeString(Path.of("logs", "v" + id + ".log"), linea,
+                        StandardCharsets.UTF_8,
+                        StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            } catch (IOException e) {
+                System.err.println("Error de registro: " + e.getMessage());
+            }
         }
     }
 
