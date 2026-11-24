@@ -1,0 +1,83 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage[a4paper,margin=2.1cm]{geometry}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage[hidelinks]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.22}
+\newcommand{\evidencia}[1]{\href{https://github.com/Kinetro/Aporte/blob/main/docs/img/#1.png}{\texttt{#1.png}}}
+\begin{document}
+\begin{center}
+{\large\bfseries UTEQ -- Carrera de Software}\\
+Aplicaciones Distribuidas (ISR-701)\\[4pt]
+{\Large\bfseries TurnoJusto -- AP-U1, Grupo 2}\\
+Informe complementario de revisión posterior a la sesión
+\end{center}
+\smallskip
+\textbf{Alcance.} Revisión documental del repositorio \href{https://github.com/Kinetro/Aporte}{Kinetro/Aporte}. Se distingue el comportamiento que consta en los registros del comportamiento previsto por el código. No se certifican pruebas sin evidencia. Este borrador fue preparado con asistencia de IA después de la evaluación; no sustituye el informe individual de la sesión.
+
+\section*{1. Escenarios y evidencias disponibles}
+\small
+\begin{tabular}{|>{\bfseries}p{0.65cm}|p{3.15cm}|p{10.95cm}|}
+\hline
+E & Evidencia & Interpretación \\ \hline
+E0 & \evidencia{E0} & Se observa la estructura inicial del repositorio en VS Code. No se ve la salida de \texttt{Get-NetAdapter}, por lo que no acredita la desconexión de red. \\ \hline
+E1 & \evidencia{E1}; \texttt{logs/v1.log} & La imagen muestra el historial inicial, no la secuencia de turnos. La bitácora registra respuestas a ESTADO con cero turnos emitidos y pendientes. Falta demostrar la secuencia 1--4 y las llamadas 1 y 2. \\ \hline
+E2 & \evidencia{E2} & Se observa código de validación del token, cupo y cola. La imagen no muestra los tres rechazos ejecutados; los registros disponibles tampoco los documentan. \\ \hline
+E3 & Sin captura ni cifras & Existe \texttt{PruebaCarga.java} y el coordinador admite \texttt{--inseguro}. Faltan los resultados medidos de los dos modos. \\ \hline
+E4 & \texttt{logs/}\newline\texttt{coordinador.log} & Se registra la caída de V1 tras 6125 ms sin latidos y su reactivación. Esto evidencia el mecanismo para V1, pero no la prueba específica de detener y reiniciar V3. \\ \hline
+E5 & \texttt{logs/v3.log} & V3 registra la indisponibilidad del coordinador (marca 34) y su recuperación (57). No consta la petición TURNO desde V1 mientras el coordinador estaba detenido. \\ \hline
+E6 & Bitácoras parciales & Se identifican dos relaciones causales en los registros existentes. Faltan \texttt{v2.log}, \texttt{orden\_total.log} y la captura de la ejecución de OrdenTotal. \\ \hline
+\end{tabular}
+\normalsize
+
+\section*{2. Cifras de la prueba de carga (E3)}
+Con cupo 10 y el coordinador recién iniciado, se esperan los siguientes valores en el modo normal; no corresponden a una medición realizada durante la revisión.
+\begin{center}
+\small
+\begin{tabular}{|l|c|c|c|}\hline
+Indicador & Esperado normal & Medido normal & Medido inseguro \\ \hline
+Asignadas & 10 & Pendiente & Pendiente \\
+Rechazadas & 20 & Pendiente & Pendiente \\
+Números distintos & 10 & Pendiente & Pendiente \\
+Emitidos por coordinador & 10 & Pendiente & Pendiente \\ \hline
+\end{tabular}
+\end{center}
+\newpage
+\section*{3. Relaciones causales (E6)}
+Los siguientes pares proceden de \texttt{logs/coordinador.log}, \texttt{logs/v1.log} y \texttt{logs/v3.log}. El orden total que generaría el comparador de OrdenTotal conserva estas desigualdades. No se afirma que el archivo final haya sido generado durante la sesión.
+\begin{center}
+\small
+\begin{tabular}{|>{\raggedright\arraybackslash}p{5.6cm}|>{\raggedright\arraybackslash}p{5.6cm}|c|}\hline
+Evento anterior & Evento posterior & Orden \\ \hline
+V3: LATIDO\_ENVIADO, marca 2 & Coordinador: LATIDO de V3 recibido (SOLICITUD\_RECIBIDA), marca 3 & $2<3$ \\ \hline
+Coordinador: ESTADO\_CONSULTADO de V1, marca 16 & V1: RESPUESTA\_RECIBIDA, ESTADO con lamport=16, marca local 17 & $16<17$ \\ \hline
+\end{tabular}
+\end{center}
+Las bitácoras incluyen reinicios que vuelven a iniciar el reloj en 1. También hay eventos que comparten una marca. Por ello, la evidencia permite comprobar pares particulares, pero no demostrar un orden causal global de todas las ejecuciones mezcladas.
+
+\section*{4. Preguntas de análisis}
+\textbf{1. Condición de carrera.} El modo normal protege la comprobación del cupo, el incremento de \texttt{ultimo} y la inserción en la cola mediante \texttt{synchronized}. El costo es la espera de otros hilos mientras se ejecuta la sección crítica. En modo inseguro se lee \texttt{ultimo}, se espera 50 ms y se actualiza sin exclusión mutua. Dos solicitudes podrían leer el mismo valor y generar duplicados. Falta verificar las cifras de ambas ejecuciones de E3.
+
+\textbf{2. CAP y caída del coordinador.} El código de Ventanilla no genera turnos locales cuando no logra comunicarse con el coordinador; informa el fallo y permite reintentar. Así prioriza la consistencia de la numeración sobre la disponibilidad de asignación durante una interrupción de comunicación. Los registros de V3 confirman indisponibilidad y recuperación, aunque no la solicitud específica de E5. Usar prefijos por ventanilla conservaría la unicidad de identificadores compuestos, pero perdería la secuencia numérica global y no garantizaría por sí solo el cupo común.
+
+\textbf{3. Punto único de fallo.} El coordinador podría replicarse y emplear una elección de líder con consenso para mantener un único orden de asignación. Si dos réplicas actualizan el último número sin coordinación, pueden emitir turnos duplicados o exceder el cupo. La implementación actual no conserva los turnos al reiniciar el coordinador.
+
+\textbf{4. Latidos y falacias de red.} El intervalo de 2 segundos y el umbral de 6 segundos consideran que la red no siempre es fiable y que la latencia no es cero. Una demora superior al umbral puede hacer que una ventanilla sea marcada como caída aunque siga funcionando. Con 7 segundos de latencia también podrían vencerse los tiempos de espera de conexión (1,5 s) o respuesta (3 s), según dónde ocurra el retraso. El registro de V1 muestra una detección a los 6125 ms, coherente con el umbral y la revisión periódica.
+
+\section*{5. Limitaciones verificables}
+El coordinador conserva el estado en memoria y es el único punto de asignación. El código de carga utiliza una marca Lamport fija de 1; algunas operaciones del coordinador reutilizan una misma marca para eventos distintos. Estos detalles impiden afirmar cumplimiento completo de D1 y D2 sin revisión adicional.
+\IfFileExists{img/E0.png}{\newpage
+\section*{Anexo. Capturas existentes}
+Las imágenes siguientes documentan el estado del proyecto en VS Code; no se presentan como pruebas completas de los escenarios.
+\newcommand{\captura}[2]{\begin{center}\IfFileExists{img/#1.png}{\includegraphics[width=0.86\linewidth,height=5.4cm,keepaspectratio]{img/#1.png}}{\fbox{\parbox[c][2.3cm][c]{0.83\linewidth}{\centering Imagen no incluida en esta copia local.\\Consultar \evidencia{#1} en el repositorio.}}}\\ \small Figura #2. Archivo \texttt{#1.png}.\end{center}}
+\captura{E0}{1}
+\captura{E1}{2}
+\captura{E2}{3}
+}{}
+\end{document}
