@@ -56,7 +56,7 @@ El archivo `config.properties` está en la raíz del repositorio:
 | `host`   | `127.0.0.1`       | Interfaz donde escucha el coordinador            |
 | `puerto` | `5000`            | Puerto TCP del coordinador                       |
 
-Los cuatro programas leen `config.properties` del directorio de trabajo y, si no
+Coordinador, Ventanilla y PruebaCarga leen `config.properties` del directorio de trabajo y, si no
 existe, buscan `src/config.properties`. **Ejecute siempre los comandos desde la raíz
 del repositorio** para que coincidan la configuración y la carpeta `logs/`.
 
@@ -142,8 +142,7 @@ java -cp out PruebaCarga 30
 ```
 
 Para comparar E3, detenga el coordinador, arránquelo con `--inseguro` y repita
-`PruebaCarga`. Con el código actual el modo normal entrega exactamente 10 números
-distintos (1 a 10) y el modo inseguro produce duplicados y menos números distintos.
+`PruebaCarga`. Con cupo 10 y el coordinador recién iniciado, el modo normal debe entregar exactamente 10 números distintos (1 a 10); el modo inseguro puede producir duplicados. Las cifras de ambos modos quedan pendientes de medición.
 
 ### 4. OrdenTotal
 
@@ -224,8 +223,7 @@ lamport;id_proceso;evento;detalle
 | `logs/v3.log`           | `3`        | eventos de la ventanilla V3                |
 | `logs/orden_total.log`  | —          | los cuatro registros en orden total        |
 
-Los archivos se crean al arrancar y se amplían en cada ejecución. Para una corrida
-limpia, elimine `logs/*.log` antes de empezar.
+Los archivos se crean al arrancar y se amplían en cada ejecución. Para una corrida limpia, utilice una copia de trabajo independiente y preserve los registros originales.
 
 ## Escenarios E0 a E6
 
@@ -240,7 +238,7 @@ whoami; hostname; Get-Date
 | **E0** | Desconecte la red y capture `Get-NetAdapter \| Format-Table Name,Status`. Cree el repositorio y haga el primer commit con el código de sesión 1. |
 | **E1** | Arranque coordinador, V1, V2 y V3. V1 pide `turno` (1), V2 pide `turno` (2), V3 pide `turno` (3), V1 pide otro `turno` (4). V2 hace `llamar` (recibe 1) y V3 hace `llamar` (recibe 2). Ejecute `estado` en las tres ventanillas: debe mostrar los mismos emitidos y pendientes. |
 | **E2** | Con cupo 10, pida el turno 11 y capture el rechazo `CUPO_AGOTADO`. Con la cola vacía, ejecute `llamar` y capture `SIN_TURNOS`. Envíe una solicitud con token incorrecto (ver comando abajo) y capture `TOKEN_INVALIDO`; verifique la línea en `logs/coordinador.log`. |
-| **E3** | Con el coordinador normal, ejecute `java -cp out PruebaCarga` y anote las cifras (deben ser 10 asignadas, 10 distintas del 1 al 10 y 20 rechazadas por cupo). Reinicie con `--inseguro`, limpie `logs/*.log`, repita `PruebaCarga` y anote las cifras. |
+| **E3** | Con el coordinador normal, ejecute `java -cp out PruebaCarga` con el coordinador recién iniciado y anote las cifras (se esperan 10 asignadas, 10 distintas del 1 al 10 y 20 rechazadas por cupo). Reinicie con `--inseguro` en una copia de trabajo separada, repita `PruebaCarga` y anote las cifras. |
 | **E4** | Con V3 activa, cierre su proceso. Espere más de 6 s y ejecute `estado`: V3 aparece `CAIDA` y queda `VENTANILLA_CAIDA` en la bitácora. Vuelva a arrancar V3, espere un latido y verifique `ACTIVA` y `VENTANILLA_ACTIVA ... reactivada=true`. |
 | **E5** | Con las ventanillas activas, detenga el coordinador y pida `turno` desde V1. La ventanilla muestra que no pudo contactar al coordinador, registra `ERROR_CONEXION` y sigue esperando. Explique en el informe qué priorizó el sistema. |
 | **E6** | Ejecute `java -cp out OrdenTotal` y revise `logs/orden_total.log`. Identifique dos pares envío→recepción donde la marca del envío sea menor que la de recepción. |
@@ -296,3 +294,7 @@ No se reutilizó código.
 - No hay persistencia: al reiniciar el coordinador, `ultimo` y la cola vuelven a cero.
 - El alcance es local (`127.0.0.1`); no se implementan reconexión del coordinador,
   réplicas ni elección de líder.
+
+## Revisión documental posterior a la sesión
+
+Se incorporó documentación complementaria con asistencia de IA después de la evaluación. No se modificó el código Java ni se generaron evidencias de la sesión original. `logs/orden_total.log` es una reconstrucción posterior de los 79 eventos disponibles en `coordinador.log`, `v1.log` y `v3.log`, ordenados por Lamport e identificador de proceso con el mismo criterio de `OrdenTotal`. Falta `v2.log`; los reinicios de los relojes impiden atribuir un orden causal global a todas las ejecuciones mezcladas. No se certifica la ejecución del escenario E6 durante la sesión. Las imágenes E0–E2 muestran el avance en el IDE, no la ejecución completa de esos escenarios. Quedan pendientes las evidencias de ejecución de E0–E6 y las cifras reales de E3. La carátula usa `docs/logo-uteq.jpg`, recuperado de un repositorio propio previo (`Kinetro/TA-IND-01-Unidad1`, `imagenes/logo-uteq.jpg`). La declaración de reutilización del código debe ser verificada por el estudiante. Cualquier uso de este complemento en la evaluación está sujeto a autorización del docente.

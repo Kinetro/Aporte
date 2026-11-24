@@ -32,7 +32,7 @@ E2 & \evidencia{E2} & Se observa código de validación del token, cupo y cola. 
 E3 & Sin captura ni cifras & Existe \texttt{PruebaCarga.java} y el coordinador admite \texttt{--inseguro}. Faltan los resultados medidos de los dos modos. \\ \hline
 E4 & \texttt{logs/}\newline\texttt{coordinador.log} & Se registra la caída de V1 tras 6125 ms sin latidos y su reactivación. Esto evidencia el mecanismo para V1, pero no la prueba específica de detener y reiniciar V3. \\ \hline
 E5 & \texttt{logs/v3.log} & V3 registra la indisponibilidad del coordinador (marca 34) y su recuperación (57). No consta la petición TURNO desde V1 mientras el coordinador estaba detenido. \\ \hline
-E6 & Bitácoras parciales & Se identifican dos relaciones causales en los registros existentes. Faltan \texttt{v2.log}, \texttt{orden\_total.log} y la captura de la ejecución de OrdenTotal. \\ \hline
+E6 & Bitácoras parciales & Se identifican dos relaciones causales en los registros existentes. Se generó un orden total parcial posterior con 79 eventos. Faltan \texttt{v2.log} y la captura de ejecución de OrdenTotal. \\ \hline
 \end{tabular}
 \normalsize
 
@@ -50,7 +50,7 @@ Emitidos por coordinador & 10 & Pendiente & Pendiente \\ \hline
 \end{center}
 \newpage
 \section*{3. Relaciones causales (E6)}
-Los siguientes pares proceden de \texttt{logs/coordinador.log}, \texttt{logs/v1.log} y \texttt{logs/v3.log}. El orden total que generaría el comparador de OrdenTotal conserva estas desigualdades. No se afirma que el archivo final haya sido generado durante la sesión.
+Los siguientes pares proceden de \texttt{logs/coordinador.log}, \texttt{logs/v1.log} y \texttt{logs/v3.log}. El archivo \texttt{logs/orden\_total.log} se reconstruyó posteriormente con 79 eventos de los tres registros disponibles, usando el mismo criterio de ordenación de OrdenTotal. Conserva estas desigualdades; no acredita la ejecución original del escenario E6.
 \begin{center}
 \small
 \begin{tabular}{|>{\raggedright\arraybackslash}p{5.6cm}|>{\raggedright\arraybackslash}p{5.6cm}|c|}\hline
